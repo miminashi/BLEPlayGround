@@ -1,0 +1,2 @@
+# BLEPlayGround
+BLE関連のお試しコードを書く用のプロジェクト
