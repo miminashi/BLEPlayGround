@@ -34,6 +34,8 @@
 //        [self.locationManager startMonitoringForRegion:self.beaconRegion];
 //        [self.locationManager startRangingBeaconsInRegion:self.beaconRegion];
     }
+
+    [self sendNotification:@"殺す"];
 }
 
 - (void)didReceiveMemoryWarning {
@@ -80,19 +82,36 @@
 - (void)locationManager:(CLLocationManager *)manager didEnterRegion:(CLRegion *)region
 {
     NSLog(@"didEnterRegion");
+    [self sendNotification:@"didEnterRegion"];
 }
 
 - (void)locationManager:(CLLocationManager *)manager didExitRegion:(CLRegion *)region
 {
     NSLog(@"didExitRegion");
+    [self sendNotification:@"didExitRegion"];
 }
 
 - (void)locationManager:(CLLocationManager *)manager didRangeBeacons:(NSArray *)beacons inRegion:(CLBeaconRegion *)region
 {
     NSLog(@"didRangeBeacons");
     for (CLBeacon *beacon in beacons) {
-        NSLog(@"UUID: %@, major: %@, minor: %@", beacon.proximityUUID, beacon.major, beacon.minor);
+        NSString *message = [NSString stringWithFormat:@"UUID: %@, major: %@, minor: %@", beacon.proximityUUID, beacon.major, beacon.minor];
+        NSLog(@"%@", message);
+        [self sendNotification:message];
     }
+}
+
+- (void)sendNotification:(NSString *)message
+{
+    UILocalNotification *notification = [[UILocalNotification alloc] init];
+    
+    notification.fireDate = [NSDate new];
+    notification.timeZone = [NSTimeZone defaultTimeZone];
+    notification.alertBody = message;
+    notification.alertAction = @"Open";
+    notification.soundName = UILocalNotificationDefaultSoundName;
+    
+    [[UIApplication sharedApplication] scheduleLocalNotification:notification];
 }
 
 @end
