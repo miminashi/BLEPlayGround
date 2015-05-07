@@ -12,6 +12,7 @@
 
 @property (nonatomic, strong) CLLocationManager *locationManager;
 @property (nonatomic, strong) CLBeaconRegion *beaconRegion;
+@property (nonatomic, strong) CLBeaconRegion *myBeaconRegion;
 
 @end
 
@@ -26,7 +27,9 @@
         self.locationManager = [CLLocationManager new];
         self.locationManager.delegate = self;
         
-        NSUUID *uuid = [[NSUUID alloc] initWithUUIDString:@"B9407F30-F5F8-466E-AFF9-25556B57FE6E"];
+        NSUUID *uuid = [[NSUUID alloc] initWithUUIDString:@"B9407F30-F5F8-466E-AFF9-25556B57FE6E"];  // Mamorio
+//        NSUUID *uuid = [[NSUUID alloc] initWithUUIDString:@"00000000-7062-1001-B000-001C4D8AA76C"];  // Aplix
+//        NSUUID *uuid = [[NSUUID alloc] initWithUUIDString:@"C318D059-F9F2-4DE8-AB0B-0701ADB7078F"];  // BeaconUSB default
         self.beaconRegion = [[CLBeaconRegion alloc] initWithProximityUUID:uuid identifier:@"com.otoshimono.mamorio"];
         
         [self.locationManager requestAlwaysAuthorization];
@@ -56,12 +59,18 @@
 - (void)locationManager:(CLLocationManager *)manager didChangeAuthorizationStatus:(CLAuthorizationStatus)status
 {
     NSLog(@"didChangeAuthorizationStatus");
+    NSArray *monitoredRegions = [self.locationManager.monitoredRegions allObjects];
+    
     switch (status) {
         case kCLAuthorizationStatusNotDetermined:
             NSLog(@"位置情報の使用を許可していない");
             break;
         case kCLAuthorizationStatusAuthorizedAlways:
+            for (CLBeaconRegion *region in monitoredRegions) {
+                [self.locationManager stopMonitoringForRegion:region];
+            }
             [self.locationManager startMonitoringForRegion:self.beaconRegion];
+            break;
         default:
             break;
     }
@@ -71,7 +80,7 @@
 {
     NSLog(@"didStartMonitoringForRegion: %@", region.identifier);
     [self.locationManager requestStateForRegion:region];
-    [self.locationManager startRangingBeaconsInRegion:self.beaconRegion];
+//    [self.locationManager startRangingBeaconsInRegion:self.beaconRegion];
 }
 
 - (void)locationManager:(CLLocationManager *)manager didDetermineState:(CLRegionState)state forRegion:(CLRegion *)region

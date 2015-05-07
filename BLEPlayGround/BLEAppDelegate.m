@@ -17,6 +17,22 @@
     UIUserNotificationSettings *settings = [UIUserNotificationSettings settingsForTypes:types categories:nil];
     [application registerForRemoteNotifications];
     [application registerUserNotificationSettings:settings];
+
+    if ([CLLocationManager isMonitoringAvailableForClass:[CLBeaconRegion class]]) {
+        NSLog(@"isMonitoringAvailableForClass");
+        self.locationManager = [CLLocationManager new];
+        self.locationManager.delegate = self;
+        self.locationManager.pausesLocationUpdatesAutomatically = NO;
+        self.locationManager.desiredAccuracy = kCLLocationAccuracyBest;
+        self.locationManager.activityType = CLActivityTypeFitness;
+//        self.locationManager.distanceFilter = 10.0;
+        
+        NSUUID *uuid = [[NSUUID alloc] initWithUUIDString:@"B9407F30-F5F8-466E-AFF9-25556B57FE6E"];  // Mamorio
+//        NSUUID *uuid = [[NSUUID alloc] initWithUUIDString:@"00000000-7062-1001-B000-001C4D8AA76C"];  // Aplix
+        self.beaconRegion = [[CLBeaconRegion alloc] initWithProximityUUID:uuid identifier:@"com.otoshimono.mamorio"];
+        
+        [self.locationManager requestAlwaysAuthorization];
+    }
     
     return YES;
 }
@@ -29,8 +45,15 @@
 
 - (void)applicationDidEnterBackground:(UIApplication *)application
 {
+    NSLog(@"applicationDidEnterBackground");
     // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later. 
     // If your application supports background execution, this method is called instead of applicationWillTerminate: when the user quits.
+    
+//    [self.locationManager stopRangingBeaconsInRegion:self.beaconRegion];
+//    [application setKeepAliveTimeout:600 handler:^{
+//        [self sendNotification:@"setKeepAliveTimeout"];
+//        [self.locationManager startRangingBeaconsInRegion:self.beaconRegion];
+//    }];
 }
 
 - (void)applicationWillEnterForeground:(UIApplication *)application
@@ -46,6 +69,54 @@
 - (void)applicationWillTerminate:(UIApplication *)application
 {
     // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
+}
+
+- (void)sendNotification:(NSString *)message
+{
+    UILocalNotification *notification = [[UILocalNotification alloc] init];
+    
+    notification.fireDate = [NSDate new];
+    notification.timeZone = [NSTimeZone defaultTimeZone];
+    notification.alertBody = message;
+    notification.alertAction = @"Open";
+//    notification.soundName = UILocalNotificationDefaultSoundName;
+    notification.soundName = nil;
+    
+    [[UIApplication sharedApplication] scheduleLocalNotification:notification];
+}
+
+- (void)locationManager:(CLLocationManager *)manager didChangeAuthorizationStatus:(CLAuthorizationStatus)status
+{
+    NSLog(@"didChangeAuthorizationStatus");
+    switch (status) {
+        case kCLAuthorizationStatusNotDetermined:
+            NSLog(@"位置情報の使用を許可していない");
+            break;
+        case kCLAuthorizationStatusAuthorizedAlways:
+//            [self.locationManager startMonitoringForRegion:self.beaconRegion];
+//            [self.locationManager startMonitoringSignificantLocationChanges];
+            [self.locationManager startUpdatingLocation];
+            [self.locationManager startRangingBeaconsInRegion:self.beaconRegion];
+        default:
+            break;
+    }
+}
+
+- (void)locationManager:(CLLocationManager *)manager didRangeBeacons:(NSArray *)beacons inRegion:(CLBeaconRegion *)region
+{
+    NSLog(@"didRangeBeacons");
+    for (CLBeacon *beacon in beacons) {
+        NSString *message = [NSString stringWithFormat:@"UUID: %@, major: %@, minor: %@", beacon.proximityUUID, beacon.major, beacon.minor];
+        NSLog(@"%@", message);
+        [self sendNotification:message];
+    }
+}
+
+- (void)locationManager:(CLLocationManager *)manager didUpdateLocations:(NSArray *)locations
+{
+    NSLog(@"didUpdateLocations");
+    [self sendNotification:@"didUpdateLocations"];
+    [self.locationManager startRangingBeaconsInRegion:self.beaconRegion];
 }
 
 @end
