@@ -8,10 +8,27 @@
 
 #import "BLEAppDelegate.h"
 
+#import <CocoaLumberjack/DDLog.h>
+#import <CocoaLumberjack/DDTTYLogger.h>
+#import <LumberjackConsole/PTEDashboard.h>
+
+static const int ddLogLevel = LOG_LEVEL_VERBOSE;
+
+static const NSInteger RangingLimit = 5;
+
+@interface BLEAppDelegate ()
+
+@property (nonatomic) NSInteger rangingCount;
+
+@end
+
 @implementation BLEAppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
+    [[PTEDashboard sharedDashboard] show];
+    DDLogInfo(@"Hello.");
+    
     // Override point for customization after application launch.
     UIUserNotificationType types = UIUserNotificationTypeBadge | UIUserNotificationTypeSound | UIUserNotificationTypeAlert;
     UIUserNotificationSettings *settings = [UIUserNotificationSettings settingsForTypes:types categories:nil];
@@ -25,7 +42,7 @@
         self.locationManager.pausesLocationUpdatesAutomatically = NO;
         self.locationManager.desiredAccuracy = kCLLocationAccuracyBest;
         self.locationManager.activityType = CLActivityTypeFitness;
-//        self.locationManager.distanceFilter = 10.0;
+        self.locationManager.distanceFilter = 100.0;
         
         NSUUID *uuid = [[NSUUID alloc] initWithUUIDString:@"B9407F30-F5F8-466E-AFF9-25556B57FE6E"];  // Mamorio
 //        NSUUID *uuid = [[NSUUID alloc] initWithUUIDString:@"00000000-7062-1001-B000-001C4D8AA76C"];  // Aplix
@@ -93,10 +110,7 @@
             NSLog(@"位置情報の使用を許可していない");
             break;
         case kCLAuthorizationStatusAuthorizedAlways:
-//            [self.locationManager startMonitoringForRegion:self.beaconRegion];
-//            [self.locationManager startMonitoringSignificantLocationChanges];
             [self.locationManager startUpdatingLocation];
-            [self.locationManager startRangingBeaconsInRegion:self.beaconRegion];
         default:
             break;
     }
@@ -104,19 +118,32 @@
 
 - (void)locationManager:(CLLocationManager *)manager didRangeBeacons:(NSArray *)beacons inRegion:(CLBeaconRegion *)region
 {
-    NSLog(@"didRangeBeacons");
+    [self notificationAndLog:@"didRangeBeacons"];
+
     for (CLBeacon *beacon in beacons) {
         NSString *message = [NSString stringWithFormat:@"UUID: %@, major: %@, minor: %@", beacon.proximityUUID, beacon.major, beacon.minor];
-        NSLog(@"%@", message);
-        [self sendNotification:message];
+        [self notificationAndLog:message];
+    }
+    self.rangingCount += 1;
+
+    if (self.rangingCount >= RangingLimit) {
+        [self.locationManager stopRangingBeaconsInRegion:region];
     }
 }
 
 - (void)locationManager:(CLLocationManager *)manager didUpdateLocations:(NSArray *)locations
 {
-    NSLog(@"didUpdateLocations");
-    [self sendNotification:@"didUpdateLocations"];
+    NSString *message = @"didUpdateLocations";
+    [self notificationAndLog:message];
+    self.rangingCount = 0;
     [self.locationManager startRangingBeaconsInRegion:self.beaconRegion];
+}
+
+- (void)notificationAndLog:(NSString *)message
+{
+    [self sendNotification:message];
+    NSLog(@"%@", message);
+    DDLogInfo(message);
 }
 
 @end
